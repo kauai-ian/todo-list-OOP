@@ -1,50 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Todo List</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="main.js" defer></script>
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
     <h1 class="title">Project Todos</h1>
     <div class="all-tasks">
-    <h2 class="task-list-title">My Projects</h2>
-    <ul class="task-list" data-lists>
+      <h2 class="task-list-title">My Projects</h2>
+      <ul class="task-list" data-lists>
         <!-- <li class="list-name" active>Project X</li>
         <li class="list-name" >Project Y</li>
         <li class="list-name" >Project Z</li> -->
       </ul>
-<!-- lists are created upon form submit to the taks-list UL-->
-<form action="">
-<input type="text"
-class="new list"
-placeholder="new list name"/>
-<button class="btn create" onclick="createList()">+</button> 
-<!-- when the button is clicked, the form calls the create list function  -->
-</form>
-</div>
-<!-- this list title will be rendered onclick  -->
-<div class="todo-list">
-    <div class="todo-header">
-        <h2 class="list-title">Project X</h2>
+      <!-- lists are created upon form submit to the taks-list UL-->
+      <form action="" data-new-list-form>
+        <input
+          type="text"
+          class="new list"
+          data-new-list-input
+          placeholder="new list title"
+        />
+        <button class="btn create">+</button>
+        <!-- when the button is clicked, the form submits & data is captured in the js file  -->
+      </form>
     </div>
-    <ul class="todo-list" data-todo>
+
+    <div class="todo-list">
+      <div class="todo-header">
+        <h2 class="list-title">Project X</h2>
+      </div>
+      <ul class="todo-list" data-todo>
         <!-- <li class="todo-item" >Project kickoff</li>
         <li class="todo-item" >Project meetings</li>
         <li class="todo-item" >Project updates</li> -->
       </ul>
-      <!-- todo renders when form submit -->
+
       <form action="">
-        <input type="text"
-        class="new todo"
-        placeholder="new todo name"/>
-        <button class="btn todo create" onclick="createTodo()">+</button>
-        <!-- when the button is clicked, the form calls the create todo function  -->
-        </form>
-</div>
-
-
-</body>
+        <input type="text" class="new todo" placeholder="new todo name" />
+        <button class="btn todo create">+</button>
+        <!-- when the button is clicked, the form submits and data is captured in the JS file  -->
+      </form>
+    </div>
+  </body>
 </html>
