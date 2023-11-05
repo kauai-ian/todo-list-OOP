@@ -1,5 +1,5 @@
 // 11/4 1.5 hours to try draw out visually what I want to do.
-// 11/5 530am-8am, 830am-
+// 11/5 530am-8am, 830am-1045am
 //next steps = pseudocode out the connection between the lists and the todos. how does that work?
 // also, how does the add todo items work?
 
@@ -9,7 +9,7 @@ const listsContainer = document.querySelector("[data-lists]");
 const newListForm = document.querySelector("[data-new-list-form]");
 const addBtn = document.querySelector(".create");
 const lists = [];
-const _activeList = activeList()
+const _activeList = renderActiveList();
 listsContainer.addEventListener("click", selectList);
 
 // 5. grab the new list form on submit and run a function that creates a new list.
@@ -75,9 +75,9 @@ function selectList(e) {
   if (e.target.classList.contains("list-title")) {
     clearActiveLists();
     setActiveList(e.target);
-    activeList();
+    renderActiveList();
+    updateDisplay();
   }
-  updateDisplay();
 }
 
 function clearActiveLists() {
@@ -91,31 +91,36 @@ function setActiveList(listItem) {
   // console.log(activeListItem, " is the active list");
 }
 
-function activeList() {
+function renderActiveList() {
   // console.log("activeList function is working")
+  const todoContainer = document.querySelector("[data-todo-list-container]");
   const activeListItem = document.querySelector(".active-list");
   if (activeListItem) {
     const selectListTitle = activeListItem.innerText;
     const selectList = lists.find((list) => list.title === selectListTitle);
     if (selectList) {
+      todoContainer.style.display = "block";
       const listId = selectList.id;
-      // console.log("List ID:", listId);
       const displayTitle = document.querySelector("[data-list-title]");
       displayTitle.innerText = selectListTitle;
+    } else {
+      todoContainer.style.display = "none";
     }
   }
 }
 
 // show the todo container if list is active
 function updateDisplay() {
-  const todoContainer = document.querySelector("[data-todo-list-container]");
-  console.log(todoContainer, "todo container")
-  if (!_activeList) {
-    todoContainer.style.display = 'none'
-  } else {
-    todoContainer.style.display = 'block'
-  }
+  // console.log(todoContainer, "todo container");
+  // console.log(lists.length, "li length");
+  // if (lists.length !== 0) {
+  //   renderActiveList();
+  //   todoContainer.style.display = "block";
+  // } else {
+  //   todoContainer.style.display = "none";
+  // }
 }
+updateDisplay();
 
 // 1. create a todo item that is related to the parent list
 // create the todo item data is stored in an object
@@ -155,16 +160,15 @@ function renderTodo() {
 // 4. grab the list name and delete the list along with all its associated todo items
 // TODO:
 function deleteList() {
-  console.log("deleteList");
-  if (_activeList) {
-    const listId = _activeList.id;
-    lists = lists.filter((list) => list.id !== listId);
-    render();
-  }
+  // console.log("deleteList");
+  // if (renderActiveList()) {
+  //   const listId = activeList.id;
+  //   lists = lists.filter((list) => list.id !== listId);
+  //   render();
+  // }
 }
 
 (function () {
-  console.log("del btn click");
   const delBtn = document.querySelector("[data-del-btn]");
   delBtn.addEventListener("click", deleteList);
 })();
