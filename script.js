@@ -1,18 +1,16 @@
-//next steps = pseudocode out the connection between the lists and the todos. how does that work?
-// --the list does not to have any html prebuilt lists and todos on page load. Right now its all click based.
-// -- when the user clicks on a list, it becomes the active list. When that happens the list title is now changed to the active list title. The todos are now for that list title.
 // 11/4 1.5 hours to try draw out visually what I want to do.
-
+// 11/5 530am-8am, 830am-
+//next steps = pseudocode out the connection between the lists and the todos. how does that work?
 // also, how does the add todo items work?
 
 // variables will be contained inside the functions themselves
 
 const listsContainer = document.querySelector("[data-lists]");
-const addBtn = document.querySelector(".create");
-const listItems = document.querySelectorAll(".list-title");
 const newListForm = document.querySelector("[data-new-list-form]");
-const newListInput = document.querySelector("[data-new-list-input]");
-
+const addBtn = document.querySelector(".create");
+const lists = [];
+const _activeList = activeList()
+listsContainer.addEventListener("click", selectList);
 
 // 5. grab the new list form on submit and run a function that creates a new list.
 // prevent refresh of page on submit. extract the value from the input field to a variable, if value is blank return.
@@ -22,6 +20,7 @@ newListForm.addEventListener("submit", handleListSubmit);
 
 function handleListSubmit(e) {
   e.preventDefault();
+  const newListInput = document.querySelector("[data-new-list-input]");
   const listTitle = newListInput.value.trim();
   if (listTitle === null || listTitle === "") return;
   const list = newList(listTitle);
@@ -39,58 +38,11 @@ function newList(title) {
   };
 }
 
-// 4. grab the list name and delete the list along with all its associated todo items
-// TODO:
-function deleteList() {
-  console.log("deleteObject");
-  if ((listsContainer.classList = "active-list")) {
-    listsContainer.remove("title");
-  }
-  render();
-}
-
-function deleteButton() {
-  const delBtn = document.querySelector("data-del-btn");
-  delBtn.textContent = "Delete List";
-  delBtn.addEventListener("click", deleteList);
-  return delBtn;
-}
-
-// 5. properties of list: (object)
-const lists = [
-  // {
-  //   id: 1,
-  //   title: "todo example 1",
-  //   todos: [
-  //     {
-  //       id: 1.1,
-  //       title: "todo 1",
-  //       description: "type your description here",
-  //       dueDate: "date",
-  //       priority: "low priority",
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: 2,
-  //   title: "todo example 2",
-  //   todos: [
-  //     {
-  //       id: 2.1,
-  //       title: "todo 1",
-  //       description: "type your description here",
-  //       dueDate: "date",
-  //       priority: "low priority",
-  //     },
-  //   ],
-  // },
-];
-
-// store information in keys. have a function that runs when storage is needing to get fetched
+// 3. storage: store information in key value pairs. have a function that runs when storage is needing to get fetched
 function getLocalStorage(lists) {
   let data;
   if (localStorage.getItem(lists)) {
-    data = JSON.parse(localStorage.getItem(variable));
+    data = JSON.parse(localStorage.getItem(lists));
   }
   return data;
 }
@@ -106,14 +58,13 @@ function clearElement(element) {
 
 function render() {
   clearElement(listsContainer);
-  console.log("render function called");
+  // console.log("render function called");
   lists.forEach((list) => {
-    console.log("new list created");
+    // console.log("new list created");
     const listElement = document.createElement("li");
     listElement.dataset.listId = list.id;
     listElement.classList.add("list-title");
     listElement.innerText = list.title;
-    listsContainer.addEventListener("click", selectList);
     listsContainer.appendChild(listElement);
   });
 }
@@ -122,23 +73,47 @@ render();
 // 5. when the user clicks on a list, it becomes the active list. When that happens, we find the list title that matches the innertext of the list item.  the list title is now changed to the active list title. The todos are now for that list title.
 function selectList(e) {
   if (e.target.classList.contains("list-title")) {
-    listItems.forEach((item) => item.classList.remove("active-list"));
-    const activeList = e.target.innerText;
-    e.target.classList.add("active-list");
-    console.log(activeList, "is selected");
+    clearActiveLists();
+    setActiveList(e.target);
+    activeList();
   }
   updateDisplay();
 }
 
-function updateDisplay() {
-  const activeList = document.querySelector(".active-list");
-  if (activeList) {
-    const selectListTitle = activeList.innerText;
+function clearActiveLists() {
+  const listItems = document.querySelectorAll(".list-title");
+  listItems.forEach((item) => item.classList.remove("active-list"));
+}
+
+function setActiveList(listItem) {
+  listItem.classList.add("active-list");
+  // const activeListItem = listItem.innerText;
+  // console.log(activeListItem, " is the active list");
+}
+
+function activeList() {
+  // console.log("activeList function is working")
+  const activeListItem = document.querySelector(".active-list");
+  if (activeListItem) {
+    const selectListTitle = activeListItem.innerText;
     const selectList = lists.find((list) => list.title === selectListTitle);
     if (selectList) {
       const listId = selectList.id;
-      console.log("List ID:", listId);
+      // console.log("List ID:", listId);
+      const displayTitle = document.querySelector("[data-list-title]");
+      displayTitle.innerText = selectListTitle;
     }
+  }
+}
+
+// show the todo container if list is active
+function updateDisplay() {
+  const todoContainer = document.querySelector("[data-todo-list-container]");
+  console.log(todoContainer, "todo container")
+  if (!_activeList) {
+    todoContainer.style.display = 'none'
+  } else {
+    todoContainer.style.display = 'block'
   }
 }
 
@@ -147,10 +122,16 @@ function updateDisplay() {
 // todos are going to be objects that are dynamically created using either factories or constructor/classes
 function createTodo() {
   console.log("creating todo item");
-  listArray.forEach((listItem) => {
+  lists.forEach((listItem) => {
     // loop through the information added by the user and add to the object
     const todoElement = document.createElement("li");
     todoElement.innerText = listItem;
+    //       id: 1.1,
+    //       title: "todo 1",
+    //       description: "type your description here",
+    //       dueDate: "date",
+    //       priority: "low priority",
+    //     },
     // object add title, desc, duedate, priority, notes
   });
 }
@@ -170,3 +151,20 @@ function renderTodo() {
 // creating todos
 // setting todos as complete
 // changing todo priority
+
+// 4. grab the list name and delete the list along with all its associated todo items
+// TODO:
+function deleteList() {
+  console.log("deleteList");
+  if (_activeList) {
+    const listId = _activeList.id;
+    lists = lists.filter((list) => list.id !== listId);
+    render();
+  }
+}
+
+(function () {
+  console.log("del btn click");
+  const delBtn = document.querySelector("[data-del-btn]");
+  delBtn.addEventListener("click", deleteList);
+})();
