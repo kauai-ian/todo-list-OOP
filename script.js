@@ -1,27 +1,27 @@
 // 11/4 1.5 hours to try draw out visually what I want to do.
-// 11/5 530am-8am, 830am-1045am
-//next steps = pseudocode out the connection between the lists and the todos. how does that work?
-// also, how does the add todo items work?
+// 11/5 530am-8am, 830am-1045am, 1130-3pm
+//next steps = local storage implementation and simplifying active list bullcrap
 
 // variables will be contained inside the functions themselves
-
+let lists = getLocalStorage('lists') || [];
+let activeList = getLocalStorage('activeList') || null;
 const listsContainer = document.querySelector("[data-lists]");
-const todoItems = document.querySelector("[data-todo-items]")
+const todoItems = document.querySelector("[data-todo-items]");
 const newListForm = document.querySelector("[data-new-list-form]");
-const newTodoForm = document.querySelector("[data-new-todo-form]")
-const addBtn = document.querySelector(".create");
-const lists = [];
+const newTodoForm = document.querySelector("[data-new-todo-form]");
+// const addBtn = document.querySelector(".create");
+
 const _activeList = renderActiveList();
+
 listsContainer.addEventListener("click", selectList);
 
 // 3. storage: store information in key value pairs. have a function that runs when storage is needing to get fetched
-function getLocalStorage(lists) {
-  let data;
-  if (localStorage.getItem(lists)) {
-    data = JSON.parse(localStorage.getItem(lists));
-  }
-  return data;
+
+function getLocalStorage(key) {
+  let data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : null;
 }
+
 //function when setting local storage
 function setLocalStorage(variable, lists) {
   localStorage.setItem(variable, JSON.stringify(lists));
@@ -38,9 +38,9 @@ function handleListSubmit(e) {
   const listTitle = newListInput.value.trim();
   if (listTitle === null || listTitle === "") return;
   const list = newList(listTitle);
-  setLocalStorage("title", newListInput.value.trim());
   newListInput.value = null;
   lists.push(list);
+  setLocalStorage("title", newListInput.value.trim());
   renderList();
 }
 
@@ -51,8 +51,6 @@ function newList(title) {
     todos: [],
   };
 }
-
-
 
 // 5. create a list that will upon pressing enter or click, add list item. then it will clear the input field. adds the properties like title, id, etc, and appends to list array. make lists array of objects into HTML and identifies which list is selected using an ID. clears the lists container input field
 function clearElement(element) {
@@ -107,6 +105,8 @@ function showActiveList(todoContainer, selectListTitle, listId) {
   const displayTitle = document.querySelector("[data-list-title]");
   displayTitle.innerText = selectListTitle;
   // logic for todos here
+  const activeList = lists.find((list) => list.id === listId);
+  renderTodoList(activeList);
 }
 
 function hideActiveList(todoContainer) {
@@ -116,7 +116,7 @@ function hideActiveList(todoContainer) {
 // 1. create a todo item that is related to the parent list
 // create the todo item data is stored in an object
 // todos are going to be objects that are dynamically created using either factories or constructor/classes
-newTodoForm.addEventListener("click", handleTodoSubmit)
+newTodoForm.addEventListener("click", handleTodoSubmit);
 
 function newTodo(title) {
   return {
@@ -126,10 +126,10 @@ function newTodo(title) {
   };
 }
 
-function renderTodo() {
+function renderTodoList(activeList) {
+  clearElement(todoItems);
   console.log("creating todo item");
-  todosArray.forEach((todo) => {
-    // loop through the information added by the user and add to the object
+  activeList.todo.forEach((todo) => {
     const todoElement = document.createElement("li");
     todoElement.innerText = todo.title;
     todoElement.dataset.todoId = todo.id;
@@ -140,17 +140,29 @@ function renderTodo() {
 // 1. create a funtion that will handle the submission of the form and pushing the new object into the array
 
 function handleTodoSubmit(e) {
-  e.preventDefault()
-  const newTodoInput = document.querySelector("[data-new-todo-input]")
-  const todoTitle = newTodoInput.value.trim()
+  e.preventDefault();
+  const newTodoInput = document.querySelector("[data-new-todo-input]");
+  const todoTitle = newTodoInput.value.trim();
   if (todoTitle === null || todoTitle === "") return;
-  const todo = newTodo(todoTitle);
-  newTodoInput.value = null;
-  // create a varibale for the current list
-  lists.dataset.todo.push(todo);
-  renderTodo();
-  };
 
+  const activeList = getActiveList();
+
+  if (activeList) {
+    const todo = newTodo(todoTitle);
+    activeList.todos.push(todo);
+    newTodoInput.value = null;
+    showActiveList(todoContainer, activeList.title, activeList);
+  }
+}
+
+function getActiveList() {
+  const activeListItem = document.querySelector(".active-list");
+  if (activeListItem) {
+    const selectListTitle = activeListItem.innerText;
+    return lists.find((list) => list.title === selectListTitle);
+  }
+  return null;
+}
 
 // 1. default todo list that all todos are added to (whatever is default selected)
 
