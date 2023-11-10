@@ -1,10 +1,72 @@
-// 11/4 1.5 hours to try draw out visually what I want to do.
-// 11/5 530am-8am, 830am-1045am, 1130-3pm
-//next steps = local storage implementation and simplifying active list bullcrap
-
 // variables will be contained inside the functions themselves
-let lists = getLocalStorage('lists') || [];
-let activeList = getLocalStorage('activeList') || null;
+
+class Model {
+  //manages the data (storage and modifying)
+  constructor() {
+    this.lists = getLocalStorage("listsKey") || []; // to load the project from memory or start blank
+    this.activeList = getLocalStorage("activeListKey");
+  }
+
+  newList(title) {
+    const list = {
+      id: Date.now().toString(),
+      title: title,
+      todos: [],
+    };
+    this.lists.push(list); // we want to push the list object to the array of lists
+    // when things change run a function with the parameter of the array of lists
+  }
+
+  newTodo(title) {
+    const todo = {
+      id: Date.now().toString(),
+      title: title,
+      complete: false,
+    };
+    this.activeList.push(todo); // pushes the new todo to the active list by default
+  }
+
+  // switch lists
+  switchLists(id) {
+    this.activeList = this.lists.find((list) => list.id === id);
+  }
+
+  // delete list via filtering out of array of lists
+  deleteList(id) {
+    this.lists = this.lists.filter((list) => list.id !== id);
+  }
+
+  deleteTodo(id) {
+    this.todo = this.todo.filter((todo) => todo.id !== id);
+  }
+
+  // flip the complete boolean on the specific todo of the active list
+  toggleTodo(id) {
+    this.activeList.todos = this.activeList.todos.map((todo) => {
+      if (todo.id === id) {
+        return { ...todo, complete: !todo.complete };
+      } else {
+        return todo;
+      }
+    });
+  }
+}
+
+class View {
+  constructor() {}
+}
+
+class Controller {
+  constructor(model, view) {
+    this.model = model;
+    this.view = view;
+  }
+}
+const app = new Controller(new Model(), new View());
+
+// old code
+
+let activeList = getLocalStorage("activeList") || null;
 const listsContainer = document.querySelector("[data-lists]");
 const todoItems = document.querySelector("[data-todo-items]");
 const newListForm = document.querySelector("[data-new-list-form]");
@@ -42,14 +104,6 @@ function handleListSubmit(e) {
   lists.push(list);
   setLocalStorage("title", newListInput.value.trim());
   renderList();
-}
-
-function newList(title) {
-  return {
-    id: Date.now().toString(),
-    title: title,
-    todos: [],
-  };
 }
 
 // 5. create a list that will upon pressing enter or click, add list item. then it will clear the input field. adds the properties like title, id, etc, and appends to list array. make lists array of objects into HTML and identifies which list is selected using an ID. clears the lists container input field
@@ -176,14 +230,6 @@ function getActiveList() {
 
 // 4. grab the list name and delete the list along with all its associated todo items
 // TODO:
-function deleteList() {
-  // console.log("deleteList");
-  // if (renderActiveList()) {
-  //   const listId = activeList.id;
-  //   lists = lists.filter((list) => list.id !== listId);
-  //   render();
-  // }
-}
 
 (function () {
   const delBtn = document.querySelector("[data-del-btn]");
