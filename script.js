@@ -1,14 +1,17 @@
 class ModelList {
   constructor() {
-    this.lists = this.getLocalStorage("listsKey") || [];
-    this.activeListId = this.getLocalStorage("activeListKey") || "";
+    this.lists = this.getLocalStorage("listsKey") || [
+      { id: 1, title: "ProjectA", todos: [] },
+      { id: 2, title: "ProjectB", todos: [] },
+    ];
+    this.activeListId = this.getLocalStorage("activeListKey") || 1;
   }
   bindListChanged(callback) {
     this.onChange = callback; // we want to create a callback to the controller.
   }
   newList(title) {
     const list = {
-      id: Date.now().toString(),
+      id: Date.now(),
       title: title,
       todos: [],
     };
@@ -20,6 +23,7 @@ class ModelList {
     return this.lists.find((list) => list.id === this.activeListId); // returns a match
   }
 
+  // need to make sure this is working
   switchLists(id) {
     this.activeListId = id; // render active list
     this.onChange(this.lists);
@@ -98,8 +102,8 @@ class ViewList {
     this.listsContainer = document.querySelector("[data-lists]");
     this.newListForm = document.querySelector("[data-new-list-form]");
     this.delBtn = document.querySelector("[data-del-btn]");
-    // this.addBtn = document.querySelector(".create");
-    this.listsContainer.addEventListener("click", () => this.bindRenderList())
+    this.newListForm.addEventListener("submit", (e) => this.addList(e));
+    this.delBtn.addEventListener("click", () => handleDeleteList());
   }
 
   createElement(tag, className) {
@@ -113,38 +117,42 @@ class ViewList {
     return element;
   }
 
-  //create list from dom
-  clearElement(element) {
-    element.innerHTML = "";
-  }
-
-  RenderList() {
-    console.log("rendering list called")
-      this.clearElement(this.listsContainer);
-      const lists = this.modelList.lists
+  renderList(lists) {
+    console.log(lists);
+    while (this.listsContainer.firstChild) {
+      this.listsContainer.removeChild(this.listsContainer.firstChild);
+    }
+    if (lists.length === 0) {
+      const p = this.createElement("p");
+      p.textContent = "Make a list first to add a todo";
+      this.listsContainer.append(p);
+    } else {
       lists.forEach((list) => {
         const listElement = document.createElement("li");
-        listElement.dataset.listId = list.id;
+        listElement.id = list.id;
         listElement.classList.add("list-title");
         listElement.innerText = list.title;
+        const deleteListButton = this.createElement("button", "delete");
+        deleteListButton.textContent = "Delete";
         this.listsContainer.appendChild(listElement);
       });
+    }
+  }
+  // add a function that will be called by an event listener to get the form data
+  // pass that function to the controller so that it can run in the model
+  addList(e) {
+    e.preventDefault();
+    console.log("list submitted");
+    const newListInput = document.querySelector("[data-new-list-input]");
+    const listTitle = newListInput.value.trim();
+    if (listTitle === null || listTitle === "") return;
+    newListInput.value = null;
+    this.helper(listTitle);
   }
 
-  bindNewList(handler) {
-    this.newListForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      console.log("list submitted");
-      const newListInput = document.querySelector("[data-new-list-input]");
-      const listTitle = newListInput.value.trim();
-      if (listTitle === null || listTitle === "") return;
-      handler(listTitle);
-      newListInput.value = null;
-    });
-  }
-
-  bindDeleteList(handler) {
-    this.delBtn.addEventListener("click", () => handler());
+  // add a todo handler that takes a call back to set this.handler to the callback
+  addListHandler(callback) {
+    this.helper = callback;
   }
 }
 
@@ -161,34 +169,30 @@ class ViewTodo {
     element.innerHTML = "";
   }
 
-  renderTodos() {
-    this.todoList.addEventListener("click", () => {
-    const todos = this.modelList.getActiveList()?.todos;
+  renderTodos(getActiveTodos) {
+    const todos = getActiveTodos();
     this.clearElement(this.todoList);
-    // if (todos) {
-      todos.forEach((todo) => {
-        const todoElement = this.createElement("li");
-        todoElement.innerText = todo.title;
-        todoElement.dataset.todoId = todo.id;
-        todoElement.classList.add("todo-item");
-        const deleteBtn = this.createElement("button", "delete");
-        deleteBtn.textContent = "Delete";
-        todoElement.append(deleteBtn);
-        this.todoList.appendChild(todoElement);
-      });
-    // }
-  })
+    todos.forEach((todo) => {
+      const todoElement = this.createElement("li");
+      todoElement.innerText = todo.title;
+      todoElement.id = todo.id;
+      todoElement.classList.add("todo-item");
+      const deleteBtn = this.createElement("button", "delete");
+      deleteBtn.textContent = "Delete";
+      todoElement.append(deleteBtn);
+      this.todoList.appendChild(todoElement);
+    });
   }
-
+  // binded to event listeners
   bindTodoSubmit(handler) {
     this.newTodoForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const newTodoInput = document.querySelector("[data-new-todo-input]");
       const todoTitle = newTodoInput.value.trim();
       if (todoTitle === null || todoTitle === "") return;
-      handler(todoTitle)
+      handler(todoTitle);
       newTodoInput.value = null;
-    })
+    });
   }
 
   bindToggleTodo(handler) {
@@ -218,14 +222,14 @@ class Controller {
     this.viewTodo = viewTodo;
 
     //explicit this binding
-    this.viewList.bindNewList(this.handleAddList);
-    this.viewList.bindDeleteList(this.handleDeleteList);
+    // this.viewList.bindNewList(this.handleAddList);
+    // this.viewList.bindDeleteList(this.handleDeleteList);
     this.viewList.renderList(this.handleRenderList);
     this.viewTodo.renderTodos(this.handleRenderTodos);
     this.viewTodo.bindTodoSubmit(this.handleAddTodo);
     this.viewTodo.bindDeleteTodo(this.handleDeleteTodo);
     this.viewTodo.bindToggleTodo(this.handleToggleTodo);
-
+    this.viewList.addListHandler(this.handleAddList);
     //display todos on page load
     this.onChange(this.modelList.lists);
     this.modelList.bindListChanged(this.onChange);
@@ -236,7 +240,7 @@ class Controller {
       ? this.modelTodo.activeList.todos
       : [];
     this.viewList.renderList(lists);
-    this.viewTodo.renderTodos(todos);
+    this.viewTodo.renderTodos(this.handleRenderTodos);
   };
   // handlers to handle clicks
   handleAddList = (listTitle) => {
@@ -249,7 +253,12 @@ class Controller {
     this.modelList.renderList();
   };
   handleRenderTodos = () => {
-    this.modelTodo.renderTodos();
+    // this.modelTodo.renderTodos();
+    // pull activelist.id and that contains the todos, call getActiveList, then
+    // pass into viewTodo
+    // inside this function grab the items from activeList and return it
+    const activeList = this.modelList.getActiveList();
+    return activeList.todos;
   };
   handleDeleteList = () => {
     this.modelList.deleteList();
@@ -261,9 +270,10 @@ class Controller {
     this.modelTodo.toggleTodo(id);
   };
 }
-const app = new Controller(
-  new ModelList(),
-  new ModelTodo(),
-  new ViewList(),
-  new ViewTodo()
-);
+
+const modelTodo = new ModelTodo();
+const viewList = new ViewList();
+const viewTodo = new ViewTodo();
+const modelList = new ModelList();
+console.log({ modelTodo, viewList, viewTodo, modelList });
+const app = new Controller(modelList, modelTodo, viewList, viewTodo);
