@@ -1,12 +1,11 @@
-// variables will be contained inside the functions themselves
-
-class Model {
-  //manages the data (storage and modifying)
+class ModelList {
   constructor() {
-    this.lists = this.getLocalStorage("listsKey") || []; // to load the project from memory or start blank
-    this.activeList = this.getLocalStorage("activeListKey") || null;
+    this.lists = this.getLocalStorage("listsKey") || [];
+    this.activeListId = this.getLocalStorage("activeListKey") || "";
   }
-
+  bindListChanged(callback) {
+    this.onChange = callback; // we want to create a callback to the controller.
+  }
   newList(title) {
     const list = {
       id: Date.now().toString(),
@@ -14,58 +13,93 @@ class Model {
       todos: [],
     };
     this.lists.push(list); // we want to push the list object to the array of lists
-    this.onChange(this.lists); // calls the onChange function to render the lists
+    this.onChange(this.lists); // calls the onListChange function to render the lists
   }
 
-  newTodo(title) {
-    const todo = {
-      id: Date.now().toString(),
-      title: title,
-      complete: false,
-    };
-    this.activeList.push(todo); // pushes the new todo to the active list by default
+  getActiveList() {
+    return this.lists.find((list) => list.id === this.activeListId); // returns a match
   }
 
   switchLists(id) {
-    this.activeList = this.lists.find((list) => list.id === id);
+    this.activeListId = id; // render active list
+    this.onChange(this.lists);
   }
 
   deleteList(id) {
     this.lists = this.lists.filter((list) => list.id !== id);
-  }
-
-  deleteTodo(id) {
-    this.todo = this.todo.filter((todo) => todo.id !== id);
-  }
-
-  toggleTodo(id) {
-    this.activeList.todos = this.activeList.todos.map((todo) => {
-      if (todo.id === id) {
-        return { ...todo, complete: !todo.complete };
-      } else {
-        return todo;
-      }
-    });
+    this.onChange(this.lists);
   }
 
   getLocalStorage(key) {
     let data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   }
-  save(todos, activeList) {
-    this.onChange(todos, activeList);
-    localStorage.setItem("todos", JSON.stringify(todos));
-    localStorage.setItem("activeListKey", activeList.id); // save the currently active list via the id
+
+  save() {
+    this.onChange(this.lists);
+    localStorage.setItem("todos", JSON.stringify(this.lists));
+    localStorage.setItem("activeListKey", this.activeListId); // save the currently active list via the id
   }
 }
 
-class View {
+class ModelTodo {
+  constructor(modelList) {
+    this.modelList = modelList;
+  }
+
+  newTodo(title) {
+    // loop over lits, find list matching id, list.add todo
+    const activeList = this.modelList.getActiveList();
+    if (activeList) {
+      const todo = {
+        id: Date.now().toString(),
+        title: title,
+        complete: false,
+      };
+      activeList.todos.push(todo); // pushes the new todo to the active list by default
+      this.modelList.save();
+    } else {
+      console.log("no active list selected--newTodo");
+      return;
+    }
+  }
+
+  deleteTodo(id) {
+    const activeList = this.modelList.getActiveList();
+    if (activeList) {
+      activeList.todos = activeList.todos.filter((todo) => todo.id !== id);
+      this.modelList.save();
+    } else {
+      console.log("no active list selected--deleteTodo");
+      return;
+    }
+  }
+
+  toggleTodo(id) {
+    const activeList = this.modelList.getActiveList();
+    if (activeList) {
+      activeList.todos = activeList.todos.map((todo) => {
+        if (todo.id === id) {
+          return { ...todo, complete: !todo.complete };
+        } else {
+          return todo;
+        }
+      });
+      this.modelList.save();
+    } else {
+      console.log("no active list selected--toggleTodo");
+      return;
+    }
+  }
+}
+
+class ViewList {
   constructor() {
     this.listsContainer = document.querySelector("[data-lists]");
-    this.todoList = document.querySelector("[data-todo-list]");
     this.newListForm = document.querySelector("[data-new-list-form]");
-    this.newTodoForm = document.querySelector("[data-new-todo-form]");
-    this.addBtn = document.querySelector(".create");
+    this.delBtn = document.querySelector("[data-del-btn]");
+    // this.addBtn = document.querySelector(".create");
+    this.listsContainer.addEventListener("click", () => this.bindRenderList())
   }
 
   createElement(tag, className) {
@@ -83,167 +117,153 @@ class View {
   clearElement(element) {
     element.innerHTML = "";
   }
-  
-  renderList() {
-    this.clearElement(this.listsContainer);
-    lists.forEach((list) => {
-      const listElement = document.createElement("li");
-      listElement.dataset.listId = list.id;
-      listElement.classList.add("list-title");
-      listElement.innerText = list.title;
-      this.listsContainer.appendChild(listElement);
+
+  RenderList() {
+    console.log("rendering list called")
+      this.clearElement(this.listsContainer);
+      const lists = this.modelList.lists
+      lists.forEach((list) => {
+        const listElement = document.createElement("li");
+        listElement.dataset.listId = list.id;
+        listElement.classList.add("list-title");
+        listElement.innerText = list.title;
+        this.listsContainer.appendChild(listElement);
+      });
+  }
+
+  bindNewList(handler) {
+    this.newListForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      console.log("list submitted");
+      const newListInput = document.querySelector("[data-new-list-input]");
+      const listTitle = newListInput.value.trim();
+      if (listTitle === null || listTitle === "") return;
+      handler(listTitle);
+      newListInput.value = null;
     });
   }
 
-renderTodos() {
-  this.clearElement(this.todoList);
-  todos.forEach(todo => {
-    const todoElement = this.createElement('li')
-    todoElement.innerText = todo.title;
-    todoElement.dataset.todoId = todo.id;
-    todoElement.classList.add("todo-item");
-    const deleteBtn = this.clearElement('button', 'delete')
-    deleteBtn.textContent = 'Delete'
-    todoElement.append(deleteBtn)
-    this.todoList.appendChild(todoElement);
-  })
+  bindDeleteList(handler) {
+    this.delBtn.addEventListener("click", () => handler());
+  }
 }
 
-
-  handleListSubmit(e) {
-    e.preventDefault();
-    const newListInput = document.querySelector("[data-new-list-input]");
-    const listTitle = newListInput.value.trim();
-    if (listTitle === null || listTitle === "") return;
-    newListInput.value = null;
+class ViewTodo {
+  constructor(modelList) {
+    this.modelList = modelList;
+    this.newTodoForm = document.querySelector("[data-new-todo-form]");
+    this.todoList = document.querySelector("[data-todo-list]");
+    this.delBtn = document.querySelector(".delete");
   }
 
-  handleTodoSubmit(e) {
-    e.preventDefault();
-    const newTodoInput = document.querySelector("[data-new-todo-input]");
-    const todoTitle = newTodoInput.value.trim();
-    if (todoTitle === null || todoTitle === "") return;
-    newTodoInput.value = null
-  }  
-  
+  //create todo from dom
+  clearElement(element) {
+    element.innerHTML = "";
+  }
 
-  //event listeners ... to be worked on
- this.listsContainer.addEventListener("click", selectList);
-    this.newListForm.addEventListener("submit", handleListSubmit);
-    newTodoForm.addEventListener("click", handleTodoSubmit);
-    (function () {
-      const delBtn = document.querySelector("[data-del-btn]");
-      delBtn.addEventListener("click", deleteList);
-    })();
+  renderTodos() {
+    this.todoList.addEventListener("click", () => {
+    const todos = this.modelList.getActiveList()?.todos;
+    this.clearElement(this.todoList);
+    // if (todos) {
+      todos.forEach((todo) => {
+        const todoElement = this.createElement("li");
+        todoElement.innerText = todo.title;
+        todoElement.dataset.todoId = todo.id;
+        todoElement.classList.add("todo-item");
+        const deleteBtn = this.createElement("button", "delete");
+        deleteBtn.textContent = "Delete";
+        todoElement.append(deleteBtn);
+        this.todoList.appendChild(todoElement);
+      });
+    // }
+  })
+  }
+
+  bindTodoSubmit(handler) {
+    this.newTodoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const newTodoInput = document.querySelector("[data-new-todo-input]");
+      const todoTitle = newTodoInput.value.trim();
+      if (todoTitle === null || todoTitle === "") return;
+      handler(todoTitle)
+      newTodoInput.value = null;
+    })
+  }
+
+  bindToggleTodo(handler) {
+    this.todoList.addEventListener("change", (e) => {
+      if (e.target.type === "checkbox") {
+        const id = parseInt(e.target.parentElement.id);
+        handler(id);
+      }
+    });
+  }
+
+  bindDeleteTodo(handler) {
+    this.todoList.addEventListener("click", (e) => {
+      if (e.target.className === "delete") {
+        const id = parseInt(e.target.parentElement.id);
+        handler(id);
+      }
+    });
+  }
 }
 
 class Controller {
-  constructor(model, view) {
-    this.model = model;
-    this.view = view;
-   
+  constructor(modelList, modelTodo, viewList, viewTodo) {
+    this.modelList = modelList;
+    this.modelTodo = modelTodo;
+    this.viewList = viewList;
+    this.viewTodo = viewTodo;
+
+    //explicit this binding
+    this.viewList.bindNewList(this.handleAddList);
+    this.viewList.bindDeleteList(this.handleDeleteList);
+    this.viewList.renderList(this.handleRenderList);
+    this.viewTodo.renderTodos(this.handleRenderTodos);
+    this.viewTodo.bindTodoSubmit(this.handleAddTodo);
+    this.viewTodo.bindDeleteTodo(this.handleDeleteTodo);
+    this.viewTodo.bindToggleTodo(this.handleToggleTodo);
+
+    //display todos on page load
+    this.onChange(this.modelList.lists);
+    this.modelList.bindListChanged(this.onChange);
   }
-
-  // handlers
-
-  // binders
-
-  
+  onChange = () => {
+    const lists = this.modelList.lists;
+    const todos = this.modelTodo.activeList
+      ? this.modelTodo.activeList.todos
+      : [];
+    this.viewList.renderList(lists);
+    this.viewTodo.renderTodos(todos);
+  };
+  // handlers to handle clicks
+  handleAddList = (listTitle) => {
+    this.modelList.newList(listTitle);
+  };
+  handleAddTodo = (todoTitle) => {
+    this.modelTodo.newTodo(todoTitle);
+  };
+  handleRenderList = () => {
+    this.modelList.renderList();
+  };
+  handleRenderTodos = () => {
+    this.modelTodo.renderTodos();
+  };
+  handleDeleteList = () => {
+    this.modelList.deleteList();
+  };
+  handleDeleteTodo = (id) => {
+    this.modelTodo.deleteTodo(id);
+  };
+  handleToggleTodo = (id) => {
+    this.modelTodo.toggleTodo(id);
+  };
 }
-const app = new Controller(new Model(), new View());
-
-// old code
-
-// 5. grab the new list form on submit and run a function that creates a new list.
-// prevent refresh of page on submit. extract the value from the input field to a variable, if value is blank return.
-// create the list object by running a sepereate function. reset the input field. push the new list to the list array.
-// update the list in the dom.
-
-// 5. create a list that will upon pressing enter or click, add list item. then it will clear the input field. adds the properties like title, id, etc, and appends to list array. make lists array of objects into HTML and identifies which list is selected using an ID. clears the lists container input field
-
-
-
-// 5. when the user clicks on a list, it becomes the active list. When that happens, we find the list title that matches the innertext of the list item.  the list title is now changed to the active list title. The todos are now for that list title.
-function selectList(e) {
-  if (e.target.classList.contains("list-title")) {
-    clearActiveLists();
-    setActiveList(e.target);
-    renderActiveList();
-  }
-}
-
-function clearActiveLists() {
-  const listItems = document.querySelectorAll(".list-title");
-  listItems.forEach((item) => item.classList.remove("active-list"));
-}
-
-function setActiveList(listItem) {
-  listItem.classList.add("active-list");
-}
-
-function renderActiveList() {
-  const todoContainer = document.querySelector("[data-todo-list-container]");
-  const activeListItem = document.querySelector(".active-list");
-  if (activeListItem) {
-    const selectListTitle = activeListItem.innerText;
-    const selectList = lists.find((list) => list.title === selectListTitle);
-    if (selectList) {
-      showActiveList(todoContainer, selectListTitle, selectList.id);
-    } else {
-      hideActiveList(todoContainer);
-    }
-  }
-}
-function showActiveList(todoContainer, selectListTitle, listId) {
-  todoContainer.style.display = "block";
-  const displayTitle = document.querySelector("[data-list-title]");
-  displayTitle.innerText = selectListTitle;
-  // logic for todos here
-  const activeList = lists.find((list) => list.id === listId);
-  renderTodoList(activeList);
-}
-
-function hideActiveList(todoContainer) {
-  todoContainer.style.display = "none";
-}
-
-// 1. create a todo item that is related to the parent list
-// create the todo item data is stored in an object
-// todos are going to be objects that are dynamically created using either factories or constructor/classes
-
-// 1. create a funtion that will handle the submission of the form and pushing the new object into the array
-
-
-  const activeList = getActiveList();
-
-  if (activeList) {
-    const todo = newTodo(todoTitle);
-    activeList.todos.push(todo);
-    newTodoInput.value = null;
-    showActiveList(todoContainer, activeList.title, activeList);
-  }
-}
-
-function getActiveList() {
-  const activeListItem = document.querySelector(".active-list");
-  if (activeListItem) {
-    const selectListTitle = activeListItem.innerText;
-    return lists.find((list) => list.title === selectListTitle);
-  }
-  return null;
-}
-
-// 1. default todo list that all todos are added to (whatever is default selected)
-
-// 5. user can create new lists of projects
-// 5. user can choose which list of projects their todos go into
-
-// seperation of application logic from DOM-related stuff
-// creating todos
-// setting todos as complete
-// changing todo priority
-
-// 4. grab the list name and delete the list along with all its associated todo items
-// TODO:
-
-
+const app = new Controller(
+  new ModelList(),
+  new ModelTodo(),
+  new ViewList(),
+  new ViewTodo()
+);
