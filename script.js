@@ -1,101 +1,7 @@
-class ModelList {
-  constructor() {
-    this.lists = this.getLocalStorage("listsKey") || [
-      { id: 1, title: "ProjectA", todos: [] },
-      { id: 2, title: "ProjectB", todos: [] },
-    ];
-    this.activeListId = this.getLocalStorage("activeListKey") || 1;
-  }
-  bindListChanged(callback) {
-    this.onChange = callback; // we want to create a callback to the controller.
-  }
-  newList(title) {
-    const list = {
-      id: Date.now(),
-      title: title,
-      todos: [],
-    };
-    this.lists.push(list); // we want to push the list object to the array of lists
-    this.onChange(this.lists); // calls the onListChange function to render the lists
-  }
-
-  getActiveList() {
-    return this.lists.find((list) => list.id === this.activeListId); // returns a match
-  }
-
-  // need to make sure this is working
-  switchLists(id) {
-    this.activeListId = id; // render active list
-    this.onChange(this.lists);
-  }
-
-  deleteList(id) {
-    this.lists = this.lists.filter((list) => list.id !== id);
-    this.onChange(this.lists);
-  }
-
-  getLocalStorage(key) {
-    let data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  }
-
-  save() {
-    this.onChange(this.lists);
-    localStorage.setItem("todos", JSON.stringify(this.lists));
-    localStorage.setItem("activeListKey", this.activeListId); // save the currently active list via the id
-  }
-}
-
-class ModelTodo {
-  constructor(modelList) {
-    this.modelList = modelList;
-  }
-
-  newTodo(title) {
-    // loop over lits, find list matching id, list.add todo
-    const activeList = this.modelList.getActiveList();
-    if (activeList) {
-      const todo = {
-        id: Date.now().toString(),
-        title: title,
-        complete: false,
-      };
-      activeList.todos.push(todo); // pushes the new todo to the active list by default
-      this.modelList.save();
-    } else {
-      console.log("no active list selected--newTodo");
-      return;
-    }
-  }
-
-  deleteTodo(id) {
-    const activeList = this.modelList.getActiveList();
-    if (activeList) {
-      activeList.todos = activeList.todos.filter((todo) => todo.id !== id);
-      this.modelList.save();
-    } else {
-      console.log("no active list selected--deleteTodo");
-      return;
-    }
-  }
-
-  toggleTodo(id) {
-    const activeList = this.modelList.getActiveList();
-    if (activeList) {
-      activeList.todos = activeList.todos.map((todo) => {
-        if (todo.id === id) {
-          return { ...todo, complete: !todo.complete };
-        } else {
-          return todo;
-        }
-      });
-      this.modelList.save();
-    } else {
-      console.log("no active list selected--toggleTodo");
-      return;
-    }
-  }
-}
+import ModelTodo from "./todo.js";
+import ModelList from "./list.js";
+// descrutured: unpacks objects into variables - saves time down the road
+import { createElement, getElement } from "./helpers.js";
 
 class ViewList {
   constructor() {
@@ -103,27 +9,16 @@ class ViewList {
     this.newListForm = document.querySelector("[data-new-list-form]");
     this.delBtn = document.querySelector("[data-del-btn]");
     this.newListForm.addEventListener("submit", (e) => this.addList(e));
-    this.delBtn.addEventListener("click", () => handleDeleteList());
   }
 
-  createElement(tag, className) {
-    const element = document.createElement(tag);
-    if (className) element.classList.add(className);
-    return element;
-  }
-
-  getElement(selector) {
-    const element = document.querySelector(selector);
-    return element;
-  }
-
+  // shows the lists from the modelList
   renderList(lists) {
-    console.log(lists);
+    // console.log(lists);
     while (this.listsContainer.firstChild) {
       this.listsContainer.removeChild(this.listsContainer.firstChild);
     }
     if (lists.length === 0) {
-      const p = this.createElement("p");
+      const p = createElement("p");
       p.textContent = "Make a list first to add a todo";
       this.listsContainer.append(p);
     } else {
@@ -132,7 +27,7 @@ class ViewList {
         listElement.id = list.id;
         listElement.classList.add("list-title");
         listElement.innerText = list.title;
-        const deleteListButton = this.createElement("button", "delete");
+        const deleteListButton = createElement("button", "delete-list");
         deleteListButton.textContent = "Delete";
         this.listsContainer.appendChild(listElement);
       });
@@ -150,10 +45,23 @@ class ViewList {
     this.helper(listTitle);
   }
 
-  // add a todo handler that takes a call back to set this.handler to the callback
+  // add a list handler that takes a call back to set this.handler to the callback
   addListHandler(callback) {
     this.helper = callback;
   }
+
+  deleteList(handler) {
+    this.listsContainer.addEventListener("click", (e) => {
+      if (e.target.className === "delete") {
+        const id = parseInt(e.target.parentElement.id);
+        handler(id);
+      }
+    });
+  }
+  // do we need a callback for delete list?
+  // addDeleteHandler(callback) {
+  //   this.helper = callback
+  // }
 }
 
 class ViewTodo {
@@ -170,14 +78,22 @@ class ViewTodo {
   }
 
   renderTodos(getActiveTodos) {
+    // console.log(getActiveTodos);
     const todos = getActiveTodos();
     this.clearElement(this.todoList);
     todos.forEach((todo) => {
-      const todoElement = this.createElement("li");
+      const todoElement = createElement("li");
       todoElement.innerText = todo.title;
       todoElement.id = todo.id;
       todoElement.classList.add("todo-item");
-      const deleteBtn = this.createElement("button", "delete");
+      if (todo.complete) {
+        const strike = createElement("s");
+        strike.innerText = todo.title;
+        todoElement.append(strike);
+      } else {
+        todoElement.innerText = todo.title;
+      }
+      const deleteBtn = createElement("button", "delete-todo");
       deleteBtn.textContent = "Delete";
       todoElement.append(deleteBtn);
       this.todoList.appendChild(todoElement);
@@ -206,7 +122,7 @@ class ViewTodo {
 
   bindDeleteTodo(handler) {
     this.todoList.addEventListener("click", (e) => {
-      if (e.target.className === "delete") {
+      if (e.target.className === "delete-todo") {
         const id = parseInt(e.target.parentElement.id);
         handler(id);
       }
@@ -222,7 +138,6 @@ class Controller {
     this.viewTodo = viewTodo;
 
     //explicit this binding
-    // this.viewList.bindNewList(this.handleAddList);
     // this.viewList.bindDeleteList(this.handleDeleteList);
     this.viewList.renderList(this.handleRenderList);
     this.viewTodo.renderTodos(this.handleRenderTodos);
@@ -230,6 +145,7 @@ class Controller {
     this.viewTodo.bindDeleteTodo(this.handleDeleteTodo);
     this.viewTodo.bindToggleTodo(this.handleToggleTodo);
     this.viewList.addListHandler(this.handleAddList);
+
     //display todos on page load
     this.onChange(this.modelList.lists);
     this.modelList.bindListChanged(this.onChange);
@@ -242,12 +158,15 @@ class Controller {
     this.viewList.renderList(lists);
     this.viewTodo.renderTodos(this.handleRenderTodos);
   };
-  // handlers to handle clicks
+  // handlers for callbacks
   handleAddList = (listTitle) => {
     this.modelList.newList(listTitle);
   };
   handleAddTodo = (todoTitle) => {
+    const activeList = this.modelList.getActiveList();
+    this.modelTodo; //set the model list because its not being constructed yet.
     this.modelTodo.newTodo(todoTitle);
+    return activeList.todos;
   };
   handleRenderList = () => {
     this.modelList.renderList();
@@ -270,10 +189,10 @@ class Controller {
     this.modelTodo.toggleTodo(id);
   };
 }
-
-const modelTodo = new ModelTodo();
+const modelList = new ModelList();
+const modelTodo = new ModelTodo(modelList);
 const viewList = new ViewList();
 const viewTodo = new ViewTodo();
-const modelList = new ModelList();
-console.log({ modelTodo, viewList, viewTodo, modelList });
+
+// console.log({ modelTodo, viewList, viewTodo, modelList });
 const app = new Controller(modelList, modelTodo, viewList, viewTodo);
