@@ -4,9 +4,9 @@ import { createElement, getElement } from "./helpers.js";
 export default class ViewTodo {
   constructor(modelList) {
     this.modelList = modelList;
-    this.newTodoForm = document.querySelector("[data-new-todo-form]");
-    this.todoList = document.querySelector("[data-todo-list]");
-    this.delBtn = document.querySelector(".delete");
+    this.newTodoForm = getElement("[data-new-todo-form]");
+    this.todoList = getElement("[data-todo-list]");
+    this.delBtn = getElement(".delete");
   }
 
   //create todo from dom
@@ -15,32 +15,41 @@ export default class ViewTodo {
   }
 
   renderTodos(getActiveTodos) {
-    // console.log(getActiveTodos);
     const todos = getActiveTodos();
     this.clearElement(this.todoList);
+
     todos.forEach((todo) => {
-      const todoElement = createElement("li");
-      todoElement.innerText = todo.title;
-      todoElement.id = todo.id;
-      todoElement.classList.add("todo-item");
+      const li = createElement("li");
+      li.id = todo.id;
+      li.classList.add("todo-item");
+
+      const checkbox = createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = todo.complete;
+
+      const span = createElement("span");
+      span.contentEditable = true;
+      span.classList.add("editable");
+
       if (todo.complete) {
         const strike = createElement("s");
         strike.innerText = todo.title;
-        todoElement.append(strike);
+        span.append(strike);
       } else {
-        todoElement.innerText = todo.title;
+        span.innerText = todo.title;
       }
+
       const deleteBtn = createElement("button", "delete-todo");
       deleteBtn.textContent = "Delete";
-      todoElement.append(deleteBtn);
-      this.todoList.appendChild(todoElement);
+      li.append(checkbox, span, deleteBtn);
+      this.todoList.appendChild(li);
     });
   }
   // binded to event listeners
   bindTodoSubmit(handler) {
     this.newTodoForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const newTodoInput = document.querySelector("[data-new-todo-input]");
+      const newTodoInput = getElement("[data-new-todo-input]");
       const todoTitle = newTodoInput.value.trim();
       if (todoTitle === null || todoTitle === "") return;
       handler(todoTitle);
@@ -51,7 +60,7 @@ export default class ViewTodo {
   bindToggleTodo(handler) {
     this.todoList.addEventListener("change", (e) => {
       if (e.target.type === "checkbox") {
-        const id = parseInt(e.target.parentElement.id);
+        const id = e.target.parentElement.id;
         handler(id);
       }
     });
@@ -60,9 +69,16 @@ export default class ViewTodo {
   bindDeleteTodo(handler) {
     this.todoList.addEventListener("click", (e) => {
       if (e.target.className === "delete-todo") {
-        const id = parseInt(e.target.parentElement.id);
+        const id = e.target.parentElement.id;
         handler(id);
       }
     });
+  }
+
+  bindClearCompleted(handler) {
+    const clearCompletedButton = getElement('[data-clear-compl-btn]')
+    if(clearCompletedButton) {
+        clearCompletedButton.addEventListener('click', handler)
+    }
   }
 }

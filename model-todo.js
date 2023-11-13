@@ -48,4 +48,16 @@ export default class ModelTodo {
       return;
     }
   }
+
+clearCompletedTodos() {
+  const activeList = this.modelList.getActiveList();
+  if(activeList) {
+    const incompleteTodos = activeList.todos.filter((todo) => !todo.complete)
+    activeList.todos = incompleteTodos
+    this.modelList.save()
+  }
+}
+
+
+
 }

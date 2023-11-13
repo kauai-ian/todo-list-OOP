@@ -2,41 +2,51 @@
 import { createElement, getElement } from "./helpers.js";
 
 export default class ViewList {
-  constructor() {
-    this.listsContainer = document.querySelector("[data-lists]");
-    this.newListForm = document.querySelector("[data-new-list-form]");
-    this.delBtn = document.querySelector("[data-del-btn]");
+  constructor(modelList) {
+    this.modelList = modelList;
+    this.listsContainer = getElement("[data-lists]");
+    this.newListForm = getElement("[data-new-list-form]");
+    this.delBtn = getElement("[data-del-btn]");
     this.newListForm.addEventListener("submit", (e) => this.addList(e));
   }
-
+  clearElement(element) {
+    element.innerHTML = "";
+  }
   // shows the lists from the modelList
   renderList(lists) {
-    // console.log(lists);
-    while (this.listsContainer.firstChild) {
-      this.listsContainer.removeChild(this.listsContainer.firstChild);
-    }
+    const activeList = this.modelList.getActiveList();
+    const activeListId = activeList.id;
+    console.log(activeListId);
+    this.clearElement(this.listsContainer);
     if (lists.length === 0) {
       const p = createElement("p");
       p.textContent = "Make a list first to add a todo";
       this.listsContainer.append(p);
     } else {
       lists.forEach((list) => {
-        const listElement = document.createElement("li");
-        listElement.id = list.id;
-        listElement.classList.add("list-title");
-        listElement.innerText = list.title;
-        const deleteListButton = createElement("button", "delete-list");
+        const li = document.createElement("li");
+        li.id = list.id;
+        li.innerText = list.title;
+        li.classList.add("list-name")
+        if (list.id === activeListId) {
+          li.classList.add("active-list");
+        }
+
+        //delete button
+        if(list.id !== 1) {const deleteListButton = createElement("button", "delete-list");
         deleteListButton.textContent = "Delete";
-        this.listsContainer.appendChild(listElement);
+        li.append(deleteListButton);
+    }
+        this.listsContainer.appendChild(li);
       });
     }
+    this.updateActiveListTitle();
   }
   // add a function that will be called by an event listener to get the form data
   // pass that function to the controller so that it can run in the model
   addList(e) {
     e.preventDefault();
-    console.log("list submitted");
-    const newListInput = document.querySelector("[data-new-list-input]");
+    const newListInput = getElement("[data-new-list-input]");
     const listTitle = newListInput.value.trim();
     if (listTitle === null || listTitle === "") return;
     newListInput.value = null;
@@ -48,16 +58,37 @@ export default class ViewList {
     this.helper = callback;
   }
 
-  deleteList(handler) {
+  bindDeleteList(handler) {
     this.listsContainer.addEventListener("click", (e) => {
-      if (e.target.className === "delete") {
+      if (e.target.classList.contains("delete-list")) {
         const id = parseInt(e.target.parentElement.id);
         handler(id);
       }
     });
   }
-  // do we need a callback for delete list?
-  // addDeleteHandler(callback) {
-  //   this.helper = callback
-  // }
+
+  bindSwitchLists(handler) {
+    this.listsContainer.addEventListener("click", (e) => {
+      if (e.target.classList.contains("list-name")) {
+        const activeListId = parseInt(e.target.id);
+        handler(activeListId);
+        this.updateActiveListClass(activeListId);
+    }
+});
+}
+
+updateActiveListClass(activeListId) {
+const listItems = this.listsContainer.querySelectorAll(".list-name");
+listItems.forEach((item) => {
+    item.classList.toggle("active-list", item.id === activeListId);
+});
+}
+
+updateActiveListTitle() {
+    const activeList = this.modelList.getActiveList();
+    const listTitleElement = getElement(".list-title");
+    if (activeList && listTitleElement) {
+      listTitleElement.innerText = activeList.title;
+    }
+  }
 }

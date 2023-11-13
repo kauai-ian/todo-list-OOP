@@ -3,7 +3,6 @@ import ModelList from "./model-list.js";
 import ViewList from "./view-list.js";
 import ViewTodo from "./view-todo.js";
 
-
 class Controller {
   constructor(modelList, modelTodo, viewList, viewTodo) {
     this.modelList = modelList;
@@ -12,13 +11,15 @@ class Controller {
     this.viewTodo = viewTodo;
 
     //explicit this binding
-    // this.viewList.bindDeleteList(this.handleDeleteList);
+    this.viewList.bindDeleteList(this.handleDeleteList);
     this.viewList.renderList(this.handleRenderList);
     this.viewTodo.renderTodos(this.handleRenderTodos);
     this.viewTodo.bindTodoSubmit(this.handleAddTodo);
     this.viewTodo.bindDeleteTodo(this.handleDeleteTodo);
     this.viewTodo.bindToggleTodo(this.handleToggleTodo);
     this.viewList.addListHandler(this.handleAddList);
+    this.viewList.bindSwitchLists(this.handleSwitchLists);
+    this.viewTodo.bindClearCompleted(this.handleClearCompleted);
 
     //display todos on page load
     this.onChange(this.modelList.lists);
@@ -26,9 +27,8 @@ class Controller {
   }
   onChange = () => {
     const lists = this.modelList.lists;
-    const todos = this.modelTodo.activeList
-      ? this.modelTodo.activeList.todos
-      : [];
+    const activeList = this.modelList.getActiveList();
+    const todos = activeList ? activeList.todos : [];
     this.viewList.renderList(lists);
     this.viewTodo.renderTodos(this.handleRenderTodos);
   };
@@ -43,18 +43,17 @@ class Controller {
     return activeList.todos;
   };
   handleRenderList = () => {
+    const activeList = this.modelList.getActiveList();
+    this.modelList;
     this.modelList.renderList();
+    return activeList.todos;
   };
   handleRenderTodos = () => {
-    // this.modelTodo.renderTodos();
-    // pull activelist.id and that contains the todos, call getActiveList, then
-    // pass into viewTodo
-    // inside this function grab the items from activeList and return it
     const activeList = this.modelList.getActiveList();
     return activeList.todos;
   };
-  handleDeleteList = () => {
-    this.modelList.deleteList();
+  handleDeleteList = (id) => {
+    this.modelList.deleteList(id);
   };
   handleDeleteTodo = (id) => {
     this.modelTodo.deleteTodo(id);
@@ -62,10 +61,16 @@ class Controller {
   handleToggleTodo = (id) => {
     this.modelTodo.toggleTodo(id);
   };
+  handleSwitchLists = (id) => {
+    this.modelList.switchLists(id);
+  };
+  handleClearCompleted = () => {
+    this.modelTodo.clearCompletedTodos();
+  };
 }
 const modelList = new ModelList();
 const modelTodo = new ModelTodo(modelList);
-const viewList = new ViewList();
+const viewList = new ViewList(modelList);
 const viewTodo = new ViewTodo();
 
 // console.log({ modelTodo, viewList, viewTodo, modelList });

@@ -1,19 +1,12 @@
 export default class ModelList {
   constructor() {
     this.lists = this.getLocalStorage("listsKey") || [
-      {
-        id: 1,
-        title: "ProjectA",
-        todos: [],
-      },
-      { id: 2, title: "ProjectB", todos: [] },
+      { id: 1, title: "Inbox", todos: [] },
     ];
-    //fill this in later after todos working.
-    // {id: 111220231036, title: "todo1", complete: false, }
-    this.activeListId = this.getLocalStorage("activeListKey") || 1;
+    this.activeListId = 1;
   }
   bindListChanged(callback) {
-    this.onChange = callback; // we want to create a callback to the controller.
+    this.onChange = callback; // create a callback to the controller.
   }
   newList(title) {
     const list = {
@@ -21,23 +14,28 @@ export default class ModelList {
       title: title,
       todos: [],
     };
-    this.lists.push(list); // we want to push the list object to the array of lists
-    this.onChange(this.lists); // calls the onListChange function to render the lists
+    this.lists.push(list); 
+    this.onChange(this.lists); // render the lists
+    this.save();
   }
 
   getActiveList() {
     return this.lists.find((list) => list.id === this.activeListId); // returns a match
   }
 
-  // need to make sure this is working
   switchLists(id) {
-    this.activeListId = id; // render active list
+    this.activeListId = id; 
     this.onChange(this.lists);
   }
 
   deleteList(id) {
-    this.lists = this.lists.filter((list) => list.id !== id);
+    this.lists = this.lists.filter((list) => list.id !== parseInt(id));
+    //if active list is the one deleted, reset 
+    if(this.activeListId === parseInt(id)) {
+      this.activeListId = 1
+    }
     this.onChange(this.lists);
+    this.save();
   }
 
   getLocalStorage(key) {
@@ -48,6 +46,5 @@ export default class ModelList {
   save() {
     this.onChange(this.lists);
     localStorage.setItem("todos", JSON.stringify(this.lists));
-    localStorage.setItem("activeListKey", this.activeListId); // save the currently active list via the id
   }
 }
